@@ -1,0 +1,36 @@
+
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ELISA Plate Layout Input</title>
+</head>
+<body>
+    <h1>ELISA Plate Layout Generator</h1>
+    <form method="POST">
+        <label for="plate_count">Number of plates:</label>
+        <input type="number" id="plate_count" name="plate_count" min="1" max="10" value="1">
+        <div id="plates">
+            <div>
+                <label for="plate_1">Plate 1 (up to 46 numbers, comma-separated):</label><br>
+                <textarea id="plate_1" name="plate_1" rows="2" cols="60"></textarea>
+            </div>
+        </div>
+        <button type="submit">Generate Layouts</button>
+    </form>
+    <script>
+        const plateCount = document.getElementById('plate_count');
+        const platesDiv = document.getElementById('plates');
+        plateCount.addEventListener('change', () => {
+            platesDiv.innerHTML = '';
+            for (let i = 1; i <= plateCount.value; i++) {
+                const container = document.createElement('div');
+                container.innerHTML = `
+                <label for="plate_${i}">Plate ${i} (up to 46 numbers, comma-separated):</label><br>
+                <textarea id="plate_${i}" name="plate_${i}" rows="2" cols="60"></textarea>
+                `;
+                platesDiv.appendChild(container);
+            }
+        });
+    </script>

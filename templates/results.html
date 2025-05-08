@@ -1,0 +1,27 @@
+<!-- templates/results.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ELISA Plate Layout Results</title>
+    <style>
+        table { border-collapse: collapse; margin-bottom: 20px; }
+        td, th { border: 1px solid #444; padding: 4px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>Generated Plate Layouts</h1>
+    {% for plate in plates %}
+        <h2>Plate {{ loop.index }}</h2>
+        <table>
+            {% for row in plate %}
+                <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    {% endfor %}
+</body>
+</html>
