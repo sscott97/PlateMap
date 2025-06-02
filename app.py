@@ -1,7 +1,4 @@
-# Procfile (root)
-web: gunicorn app:app
-
-# app.py
+# Flask application to generate formatted sample IDs and plate layouts
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
