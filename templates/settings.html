@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #107b9f, #052d74);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            position: relative; /* needed for absolute positioning inside */
+
+            max-width: 800px;
+            margin: auto;
+            background-color: #fff;
+            padding: 30px 40px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .small-logo {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            font-size: 28px;
+            color: #333;
+        }
+
+        .form-section {
+            margin-bottom: 40px;
+        }
+
+        .form-section h3 {
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 6px;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            background-color: #fdfdfd;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        button {
+            display: inline-block;
+            background-color: #0077cc;
+            color: white;
+            font-size: 16px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #005fa3;
+        }
+
+        a {
+            text-decoration: none;
+            color: #0077cc;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 30px;
+        }
+    </style>
+    <script>
+        function saveDefaultsToStorage() {
+            const fields = [
+                'pos_label', 'neg_label', 'ctrl3_label',
+                'include_pos', 'include_neg', 'include_ctrl3',
+                'prefix', 'suffix', 'id_length', 'pad_char',
+                'replicate_count', 'layout_mode', 'plate_count'
+            ];
+            fields.forEach(name => {
+                const el = document.getElementsByName(name)[0];
+                if (el) {
+                    if (el.type === 'checkbox') {
+                        localStorage.setItem('default_' + name, el.checked);
+                    } else {
+                        localStorage.setItem('default_' + name, el.value);
+                    }
+                }
+            });
+            alert('Defaults saved successfully.');
+        }
+
+        function loadDefaultsFromStorage() {
+            const fields = [
+                'pos_label', 'neg_label', 'ctrl3_label',
+                'include_pos', 'include_neg', 'include_ctrl3',
+                'prefix', 'suffix', 'id_length', 'pad_char',
+                'replicate_count', 'layout_mode', 'plate_count'
+            ];
+            fields.forEach(name => {
+                const el = document.getElementsByName(name)[0];
+                const val = localStorage.getItem('default_' + name);
+                if (el && val !== null) {
+                    if (el.type === 'checkbox') {
+                        el.checked = val === 'true';
+                    } else {
+                        el.value = val;
+                    }
+                }
+            });
+        }
+
+        window.onload = loadDefaultsFromStorage;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="small-logo">
+
+        <h1>Default Settings</h1>
+        <form onsubmit="saveDefaultsToStorage(); return false;">
+            <div class="form-section">
+                <h3>Controls</h3>
+                <div class="form-group">
+                    <input type="checkbox" name="include_pos" id="include_pos">
+                    <label for="pos_label">Control 1 Label</label>
+                    <input type="text" name="pos_label">
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" name="include_neg" id="include_neg">
+                    <label for="neg_label">Control 2 Label</label>
+                    <input type="text" name="neg_label">
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" name="include_ctrl3" id="include_ctrl3">
+                    <label for="ctrl3_label">Control 3 Label</label>
+                    <input type="text" name="ctrl3_label">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Sample ID Settings</h3>
+                <label for="prefix">Sample Prefix</label>
+                <input type="text" name="prefix">
+                <label for="suffix">Sample Suffix</label>
+                <input type="text" name="suffix">
+                <label for="id_length">ID Length</label>
+                <input type="number" name="id_length">
+                <label for="pad_char">Pad Character</label>
+                <input type="text" name="pad_char" maxlength="1">
+            </div>
+
+            <div class="form-section">
+                <h3>Layout Settings</h3>
+                <label for="replicate_count">Replicate Count</label>
+                <input type="number" name="replicate_count">
+                <label for="layout_mode">Replication Layout</label>
+                <select name="layout_mode">
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                </select>
+                <label for="plate_count">Number of Plates</label>
+                <input type="number" name="plate_count">
+            </div>
+
+            <div style="text-align: center;">
+                <button type="submit">Save Defaults</button>
+            </div>
+
+            <div class="back-link">
+                <p><a href="/">&larr; Back to Form</a></p>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

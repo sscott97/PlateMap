@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head> 
+    <title>Plate Layout Mapper</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #107b9f, #052d74);
+            margin: 0;
+            padding: 40px 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .form-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin: 30px 0 10px;
+            font-size: 18px;
+            color: #444;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+            text-align: left;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            min-width: 120px;
+            font-weight: 500;
+        }
+
+        .input-group input[type="text"],
+        .input-group input[type="number"],
+        .input-group select {
+            padding: 8px 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .input-group input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            margin-top: 5px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .label-and-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .control-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button[type="submit"] {
+            background-color: #0077cc;
+            color: white;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #005fa3;
+            transform: scale(1.05);
+        }
+
+        button[type="button"] {
+            background-color: #e0e0e0;
+        }
+
+        button[type="button"]:hover {
+            background-color: #ccc;
+            transform: scale(1.05);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        #plate_inputs label {
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .label-and-input {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+    <script>
+        function updatePlateInputs() {
+            const container = document.getElementById('plate_inputs');
+            const plateCount = parseInt(document.getElementById('plate_count').value) || 1;
+            container.innerHTML = '';
+            for (let i = 1; i <= plateCount; i++) {
+                const label = document.createElement('label');
+                label.textContent = `Plate ${i} Sample IDs:`;  // <-- Fix here
+                const textarea = document.createElement('textarea');
+                textarea.name = `plate_${i}`;
+                container.appendChild(label);
+                container.appendChild(document.createElement('br'));
+                container.appendChild(textarea);
+                container.appendChild(document.createElement('br'));
+            }
+
+            // Load saved values for dynamic fields
+            for (let i = 1; i <= plateCount; i++) {
+                const textarea = document.getElementsByName(`plate_${i}`)[0];
+                const saved = sessionStorage.getItem(`plate_${i}`);
+                if (textarea && saved !== null) {
+                    textarea.value = saved;
+                }
+            }
+        }
+
+        function saveFormInputs() {
+            const formElements = document.querySelectorAll('form input, form select, form textarea');
+            formElements.forEach(el => {
+                el.addEventListener('input', () => {
+                    sessionStorage.setItem(el.name, el.type === 'checkbox' ? el.checked : el.value);
+                });
+            });
+        }
+
+        function loadFormInputs() {
+            const formElements = document.querySelectorAll('form input, form select, form textarea');
+            formElements.forEach(el => {
+                const savedValue = sessionStorage.getItem(el.name);
+                if (savedValue !== null) {
+                    if (el.type === 'checkbox') {
+                        el.checked = savedValue === 'true';
+                    } else {
+                        el.value = savedValue;
+                    }
+                }
+            });
+            document.getElementById('plate_count').addEventListener('change', updatePlateInputs);
+        }
+        
+        function loadDefaultsFromStorage() {
+            const fields = [
+                'pos_label', 'neg_label', 'ctrl3_label',
+                'include_pos', 'include_neg', 'include_ctrl3',
+                'prefix', 'suffix', 'id_length', 'pad_char',
+                'replicate_count', 'layout_mode', 'plate_count'
+            ];
+            fields.forEach(name => {
+                const el = document.getElementsByName(name)[0];
+                const val = localStorage.getItem('default_' + name);
+                if (el && val !== null) {
+                    if (el.type === 'checkbox') {
+                        el.checked = val === 'true';
+                    } else {
+                        el.value = val;
+                    }
+                }
+            });
+        }
+
+        function clearFormInputs() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        window.onload = function () {
+            loadDefaultsFromStorage();
+            loadFormInputs();
+            updatePlateInputs();
+            saveFormInputs();
+        };
+    </script>
+</head>
+<body>
+    <div class="form-container">
+        <div style="display: flex; justify-content: flex-end;">
+            <a href="/settings" style="text-decoration: none; background-color: #0077cc; color: white; padding: 8px 16px; border-radius: 6px;">Settings</a>
+        </div>
+        <div style="text-align: center; margin: 5px 0;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Plate Layout Mapper" style="max-height: 200px; max-width: 100%; display: block; margin: 0 auto;">
+
+        
+
+
+
+        <form method="POST">
+
+            <div class="section-title">Controls</div>
+
+            <div class="control-checkbox-group">
+                <input type="checkbox" name="include_pos" id="include_pos" checked>
+                <div class="label-and-input">
+                    <label for="include_pos">Control 1:</label>
+                    <input type="text" name="pos_label" placeholder="Control" value="{{ pos_label }}">
+                </div>
+
+                <input type="checkbox" name="include_neg" id="include_neg" checked>
+                <div class="label-and-input">
+                    <label for="include_neg">Control 2:</label>
+                    <input type="text" name="neg_label" placeholder="Control" value="{{ neg_label }}">
+                </div>
+
+                <input type="checkbox" name="include_ctrl3" id="include_ctrl3" unchecked>
+                <div class="label-and-input">
+                    <label for="include_ctrl3">Control 3:</label>
+                    <input type="text" name="ctrl3_label" placeholder="Control" value="{{ ctrl3_label }}">
+                </div>
+            </div>
+
+            <div class="section-title">Sample ID Settings</div>
+
+            <div class="input-group">
+                <label for="prefix">Sample Prefix:</label>
+                <input type="text" name="prefix" placeholder="Optional" value="{{ prefix }}">
+                <label for="suffix">Sample Suffix:</label>
+                <input type="text" name="suffix" placeholder="Optional" value="{{ suffix }}">
+            </div>
+
+            <div class="input-group">
+                <label for="id_length">ID Length:</label>
+                <input type="number" name="id_length" placeholder="e.g. 4" min="1" required>
+                <label for="pad_char">Pad Char:</label>
+                <input type="text" name="pad_char" maxlength="1" placeholder="e.g. 0" style="width: 40px;">
+            </div>
+
+            <div class="section-title">Layout Settings</div>
+
+            <div class="input-group">
+                <label for="replicate_count">Replicates:</label>
+                <input type="number" name="replicate_count" placeholder="Replicate Count" min="1" value="2" style="width: 60px;">
+
+                <label for="layout_mode">Replication Layout:</label>
+                <select name="layout_mode">
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="plate_count">Number of Plates:</label>
+                <input type="number" id="plate_count" name="plate_count" value="1" min="1" max="10" onchange="updatePlateInputs()">
+            </div>
+
+            <div id="plate_inputs" class="plate-box"></div>
+
+            <div class="button-group">
+                <button type="submit">Generate Plate Maps</button>
+                <button type="button" onclick="clearFormInputs()">Clear Inputs</button>
+            </div>
+
+        </form>
+    </div>
+</body>
+</html>
