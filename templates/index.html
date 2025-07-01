@@ -149,18 +149,26 @@
         }
     </style>
     <script>
+
         function updatePlateInputs() {
             const container = document.getElementById('plate_inputs');
             const plateCount = parseInt(document.getElementById('plate_count').value) || 1;
             container.innerHTML = '';
+
             for (let i = 1; i <= plateCount; i++) {
                 const label = document.createElement('label');
-                label.textContent = `Plate ${i} Sample IDs:`;  // <-- Fix here
+                label.innerHTML = `Plate ${i} Sample IDs: <span id="count_plate_${i}">(0)</span>`;
                 const textarea = document.createElement('textarea');
                 textarea.name = `plate_${i}`;
+                
+                // Append elements
                 container.appendChild(label);
                 container.appendChild(document.createElement('br'));
                 container.appendChild(textarea);
+
+                // ✅ Add live count update on input
+                textarea.addEventListener('input', () => updateSampleCount(i));
+
                 container.appendChild(document.createElement('br'));
             }
 
@@ -172,7 +180,13 @@
                     textarea.value = saved;
                 }
             }
+
+            // ✅ Initialize counts after loading saved values
+            for (let i = 1; i <= plateCount; i++) {
+                updateSampleCount(i);
+            }
         }
+
 
         function saveFormInputs() {
             const formElements = document.querySelectorAll('form input, form select, form textarea');
@@ -221,6 +235,17 @@
         function clearFormInputs() {
             sessionStorage.clear();
             location.reload();
+        }
+
+
+        function updateSampleCount(index) {
+            const textarea = document.getElementsByName(`plate_${index}`)[0];
+            const countSpan = document.getElementById(`count_plate_${index}`);
+            if (textarea && countSpan) {
+                const input = textarea.value.trim();
+                const count = input ? input.split(',').filter(s => s.trim() !== '').length : 0;
+                countSpan.textContent = `(${count})`;
+            }
         }
 
         window.onload = function () {
