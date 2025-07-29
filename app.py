@@ -1,6 +1,6 @@
 # Flask application to generate formatted sample IDs and plate layouts
 from flask import Flask, render_template, request
-import os
+import os #required for working with render, needed to get the port from environment variables
 
 app = Flask(__name__)
 
@@ -97,10 +97,10 @@ def build_grid(sample_ids, replicate_count, layout_mode,
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    default_prefix = '837S'
+    default_prefix = ''
     default_suffix = ''
-    default_pos = 'KIOVIG'
-    default_neg = 'Negative'
+    default_pos = ''
+    default_neg = ''
     default_ctrl3 = ''
 
     if request.method == 'POST':
@@ -140,6 +140,15 @@ def index():
         except ValueError:
             plate_count = 1
 
+        plate_labels = []
+        for i in range(1, plate_count + 1):
+            label = request.form.get(f'plate_label_{i}', '').strip()
+            if not label:
+                label = f"Plate {i}"
+            plate_labels.append(label)
+
+
+
         plates = []
         for i in range(1, plate_count + 1):
             raw = request.form.get(f'plate_{i}', '')
@@ -156,7 +165,10 @@ def index():
                 include_pos, include_neg, include_ctrl3
             ))
 
-        return render_template('results.html', plates=plates)
+       # plate_labels = [f"Plate {i + 1}" for i in range(len(plates))]  # or your own custom logic
+        return render_template('results.html', plates=plates, plate_labels=plate_labels)
+
+    
 
     return render_template('index.html', prefix=default_prefix, suffix=default_suffix,
                            pos_label=default_pos, neg_label=default_neg, ctrl3_label=default_ctrl3)

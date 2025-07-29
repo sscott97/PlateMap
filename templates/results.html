@@ -1,27 +1,205 @@
-<!-- templates/results.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>ELISA Plate Layout Results</title>
+    <title>Plate Map Results</title>
     <style>
-        table { border-collapse: collapse; margin-bottom: 20px; }
-        td, th { border: 1px solid #444; padding: 4px; text-align: center; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom right, #107b9f, #052d74);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+
+        .container {
+            position: relative;
+
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 1000px;
+            width: 90%;
+        }
+        .small-logo {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+            user-select: none;
+            pointer-events: none;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            color: #333;
+        }
+
+        .plate {
+            margin-bottom: 40px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            text-align: center;
+            padding: 6px;
+            width: 60px;
+            height: 30px;
+        }
+
+        th {
+            background-color: #e9ecf3;
+        }
+
+        .well-empty {
+            background-color: #f9f9f9;
+        }
+
+        .well-control {
+            background-color: #d3e5ff;
+        }
+
+        .well-sample {
+            background-color: #c8f7c5;
+        }
+
+        button {
+            background-color: #0077cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #005fa3;
+            transform: scale(1.05);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            background-color: #e0e0e0;
+            color: #333;
+            padding: 8px 16px;
+            border-radius: 6px;
+        }
+
+        .back-link:hover {
+            background-color: #ccc;
+            transform: scale(1.05);
+        }
+
+        .button-row {
+            margin-top: 10px;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
-    <h1>Generated Plate Layouts</h1>
-    {% for plate in plates %}
-        <h2>Plate {{ loop.index }}</h2>
-        <table>
-            {% for row in plate %}
+    <div class="container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="small-logo">
+        <h1>Plate Map Results</h1>
+        {% for i in range(plates|length) %}
+        <div class="plate">
+            <h2>{{ plate_labels[i] if plate_labels[i]|trim else 'Plate ' ~ (i + 1) }}</h2>
+            <table>
                 <tr>
-                    {% for cell in row %}
-                        <td>{{ cell }}</td>
+                    <th></th>
+                    {% for col in range(1,13) %}
+                        <th>{{ col }}</th>
                     {% endfor %}
                 </tr>
-            {% endfor %}
-        </table>
-    {% endfor %}
+                {% for row in range(8) %}
+                <tr>
+                    <th>{{ 'ABCDEFGH'[row] }}</th>
+                    {% for col in range(12) %}
+                        {% set well = plates[i][row][col] %}
+                        {% if well == '' %}
+                            <td class="well-empty"></td>
+                        {% elif well.startswith('Control:') %}
+                            <td class="well-control">{{ well }}</td>
+                        {% else %}
+                            <td class="well-sample">{{ well }}</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </table>
+            <div class="button-row">
+                <button onclick="copyPlateToClipboard(this)">Copy 8x12 Layout</button>
+                <button onclick="copyPlateCSV(this)">Copy CSV</button>
+            </div>
+        </div>
+        {% endfor %}
+        <a href="/" class="back-link">&larr; Back to Form</a>
+    </div>
+
+    <script>
+    function copyPlateToClipboard(button) {
+        const table = button.closest('.plate').querySelector('table');
+        let tsv = '';
+        for (let i = 1; i < table.rows.length; i++) {
+            const row = table.rows[i];
+            const cells = Array.from(row.cells).slice(1);  // Skip the row label (A-H)
+            const values = cells.map(cell => {
+                let text = cell.innerText.trim();
+                return text.replace(/\n/g, ' ');
+            });
+            tsv += values.join('\t') + '\n';
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = tsv;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        alert('8x12 layout copied to clipboard!');
+    }
+
+    function copyPlateCSV(button) {
+        const table = button.closest('.plate').querySelector('table');
+        let values = [];
+
+        for (let col = 1; col <= 12; col++) {
+            for (let row = 1; row <= 8; row++) {
+                const cell = table.rows[row].cells[col];
+                const text = cell.innerText.trim();
+                if (text !== '') {
+                    values.push(text);
+                }
+            }
+        }
+
+        const csv = values.join(',');
+
+        const textarea = document.createElement('textarea');
+        textarea.value = csv;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        alert('Comma-seperated list copied to clipboard!');
+    }
+    </script>
 </body>
 </html>

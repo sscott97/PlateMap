@@ -1,42 +1,339 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>ELISA Plate Layout Input</title>
+<html>
+<head> 
+    <title>Plate Layout Mapper</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #107b9f, #052d74);
+            margin: 0;
+            padding: 40px 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .form-container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin: 30px 0 10px;
+            font-size: 18px;
+            color: #444;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+            text-align: left;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            min-width: 120px;
+            font-weight: 500;
+        }
+
+        .input-group input[type="text"],
+        .input-group input[type="number"],
+        .input-group select {
+            padding: 8px 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .input-group input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            margin-top: 5px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .label-and-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .control-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button[type="submit"] {
+            background-color: #0077cc;
+            color: white;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #005fa3;
+            transform: scale(1.05);
+        }
+
+        button[type="button"] {
+            background-color: #e0e0e0;
+        }
+
+        button[type="button"]:hover {
+            background-color: #ccc;
+            transform: scale(1.05);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        #plate_inputs label {
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .input-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .label-and-input {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+    <script>
+        // Apply a settings object to form inputs by name (matching your input names)
+        function setAllSettings(settings) {
+            if (!settings) return;
+            document.getElementsByName("include_pos")[0].checked = !!settings.include_pos;
+            document.getElementsByName("include_neg")[0].checked = !!settings.include_neg;
+            document.getElementsByName("include_ctrl3")[0].checked = !!settings.include_ctrl3;
+            document.getElementsByName("pos_label")[0].value = settings.pos_label || '';
+            document.getElementsByName("neg_label")[0].value = settings.neg_label || '';
+            document.getElementsByName("ctrl3_label")[0].value = settings.ctrl3_label || '';
+            document.getElementsByName("prefix")[0].value = settings.prefix || '';
+            document.getElementsByName("suffix")[0].value = settings.suffix || '';
+            document.getElementsByName("id_length")[0].value = settings.id_length || '';
+            document.getElementsByName("pad_char")[0].value = settings.pad_char || '';
+            document.getElementsByName("replicate_count")[0].value = settings.replicate_count || '';
+            document.getElementsByName("layout_mode")[0].value = settings.layout_mode || 'vertical';
+            document.getElementsByName("plate_count")[0].value = settings.plate_count || '1';
+        }
+
+        // Load the selected preset from localStorage and apply it
+        function loadSelectedPreset() {
+            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
+            const selectedPresetName = localStorage.getItem("selectedPreset");
+            if (selectedPresetName && presets[selectedPresetName]) {
+                setAllSettings(presets[selectedPresetName]);
+            }
+        }
+
+        // Existing functions: updatePlateInputs, saveFormInputs, loadFormInputs, clearFormInputs
+
+
+        function updatePlateInputs() {
+            const container = document.getElementById('plate_inputs');
+            const plateCount = parseInt(document.getElementsByName('plate_count')[0].value) || 1;
+            container.innerHTML = '';
+
+            for (let i = 1; i <= plateCount; i++) {
+                const group = document.createElement('div');
+                group.className = 'plate-group';
+
+                // Plate Label input
+                const labelInputLabel = document.createElement('label');
+                labelInputLabel.textContent = `Plate ${i} Label:`;
+                const labelInput = document.createElement('input');
+                labelInput.type = 'text';
+                labelInput.name = `plate_label_${i}`;
+                labelInput.placeholder = `Plate ${i}`;
+                labelInput.className = 'plate-label-input';
+
+                // Restore label if saved
+                const savedLabel = sessionStorage.getItem(`plate_label_${i}`);
+                if (savedLabel !== null) labelInput.value = savedLabel;
+
+                // Sample ID textarea WITHOUT label, with placeholder instead
+                const textarea = document.createElement('textarea');
+                textarea.name = `plate_${i}`;
+                textarea.rows = 3;
+                textarea.placeholder = "Enter your Sample IDs here";
+
+                // Restore textarea if saved
+                const savedText = sessionStorage.getItem(`plate_${i}`);
+                if (savedText !== null) textarea.value = savedText;
+
+                // Append everything
+                group.appendChild(labelInputLabel);
+                group.appendChild(labelInput);
+                group.appendChild(document.createElement('br'));
+                group.appendChild(textarea);
+                group.appendChild(document.createElement('br'));
+                container.appendChild(group);
+            }
+        }
+
+
+
+        function saveFormInputs() {
+            const formElements = document.querySelectorAll('form input, form select, form textarea');
+            formElements.forEach(el => {
+                el.addEventListener('input', () => {
+                    sessionStorage.setItem(el.name, el.type === 'checkbox' ? el.checked : el.value);
+                });
+            });
+        }
+
+        function loadFormInputs() {
+            const formElements = document.querySelectorAll('form input, form select, form textarea');
+            formElements.forEach(el => {
+                const savedValue = sessionStorage.getItem(el.name);
+                if (savedValue !== null) {
+                    if (el.type === 'checkbox') {
+                        el.checked = savedValue === 'true';
+                    } else {
+                        el.value = savedValue;
+                    }
+                }
+            });
+            document.getElementsByName('plate_count')[0].addEventListener('change', updatePlateInputs);
+        }
+
+        function clearFormInputs() {
+            sessionStorage.clear();
+            location.reload();
+        }
+
+        window.onload = function () {
+            loadSelectedPreset();  // Load and apply selected preset FIRST
+            loadFormInputs();      // Then load any sessionStorage saved inputs
+            updatePlateInputs();   // Then update plate input textareas
+            saveFormInputs();      // Add event listeners for sessionStorage saving
+        };
+    </script>
 </head>
 <body>
-    <h1>ELISA Plate Layout Generator</h1>
-    <form method="POST">
-        <label for="prefix">ID Prefix:</label>
-        <input type="text" id="prefix" name="prefix" value="{{ prefix }}"><br><br>
-
-        <label for="plate_count">Number of plates:</label>
-        <input type="number" id="plate_count" name="plate_count" min="1" max="10" value="1"><br><br>
-
-        <div id="plates">
-            <div>
-                <label for="plate_1">Plate 1 (up to 46 numbers, comma-separated):</label><br>
-                <textarea id="plate_1" name="plate_1" rows="2" cols="60"></textarea>
-            </div>
+    <div class="form-container">
+        <div style="display: flex; justify-content: flex-end;">
+            <a href="/settings" style="text-decoration: none; background-color: #0077cc; color: white; padding: 8px 16px; border-radius: 6px;">Settings</a>
+        </div>
+        <div style="text-align: center; margin: 5px 0;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Plate Layout Mapper" style="max-height: 200px; max-width: 100%; display: block; margin: 0 auto;">
         </div>
 
-        <button type="submit">Generate Layouts</button>
-    </form>
+        <form method="POST">
+            <!-- Controls -->
+            <div class="section-title">Controls</div>
+            <div class="control-checkbox-group">
+                <input type="checkbox" name="include_pos" id="include_pos" checked>
+                <div class="label-and-input">
+                    <label for="include_pos">Control 1:</label>
+                    <input type="text" name="pos_label" placeholder="Control" value="{{ pos_label }}">
+                </div>
 
-    <script>
-        const plateCount = document.getElementById('plate_count');
-        const platesDiv = document.getElementById('plates');
-        plateCount.addEventListener('change', () => {
-            platesDiv.innerHTML = '';
-            for (let i = 1; i <= plateCount.value; i++) {
-                const container = document.createElement('div');
-                container.innerHTML = `
-                    <label for="plate_${i}">Plate ${i} (up to 46 numbers, comma-separated):</label><br>
-                    <textarea id="plate_${i}" name="plate_${i}" rows="2" cols="60"></textarea>
-                    <br><br>
-                `;
-                platesDiv.appendChild(container);
-            }
-        });
-    </script>
+                <input type="checkbox" name="include_neg" id="include_neg" checked>
+                <div class="label-and-input">
+                    <label for="include_neg">Control 2:</label>
+                    <input type="text" name="neg_label" placeholder="Control" value="{{ neg_label }}">
+                </div>
+
+                <input type="checkbox" name="include_ctrl3" id="include_ctrl3">
+                <div class="label-and-input">
+                    <label for="include_ctrl3">Control 3:</label>
+                    <input type="text" name="ctrl3_label" placeholder="Control" value="{{ ctrl3_label }}">
+                </div>
+            </div>
+
+            <!-- Sample ID Settings -->
+            <div class="section-title">Sample ID Settings</div>
+            <div class="input-group">
+                <label for="prefix">Sample Prefix:</label>
+                <input type="text" name="prefix" placeholder="Optional" value="{{ prefix }}">
+                <label for="suffix">Sample Suffix:</label>
+                <input type="text" name="suffix" placeholder="Optional" value="{{ suffix }}">
+            </div>
+
+            <div class="input-group">
+                <label for="id_length">ID Length:</label>
+                <input type="number" name="id_length" placeholder="e.g. 4" min="1" required>
+                <label for="pad_char">Pad Char:</label>
+                <input type="text" name="pad_char" maxlength="1" placeholder="e.g. 0" style="width: 40px;">
+            </div>
+
+            <!-- Layout Settings -->
+            <div class="section-title">Layout Settings</div>
+            <div class="input-group">
+                <label for="replicate_count">Replicates:</label>
+                <input type="number" name="replicate_count" placeholder="Replicate Count" min="1" value="2" style="width: 60px;">
+
+                <label for="layout_mode">Replication Layout:</label>
+                <select name="layout_mode">
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="plate_count">Number of Plates:</label>
+                <input type="number" id="plate_count" name="plate_count" value="1" min="1" max="10" onchange="updatePlateInputs()">
+            </div>
+
+            <div class="section-title">Plate Layouts</div>
+            <div id="plate_inputs"></div>
+
+            <div class="button-group">
+                <button type="submit">Generate Plate Maps</button>
+                <button type="button" onclick="clearFormInputs()">Clear Inputs</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
