@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import os
+import json
 
 app = Flask(__name__)
 
-# Use Render Persistent Disk
 DB_FILE = "/mnt/persist/presets.db"
 
 # -----------------------
@@ -30,13 +30,13 @@ def load_presets():
     rows = c.fetchall()
     conn.close()
     # Convert JSON strings to dict
-    return {name: eval(settings) for name, settings in rows}
+    return {name: json.loads(settings) for name, settings in rows}
 
 def save_preset(name, settings):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO presets (name, settings) VALUES (?, ?)", 
-              (name, str(settings)))
+    c.execute("INSERT OR REPLACE INTO presets (name, settings) VALUES (?, ?)",
+              (name, json.dumps(settings)))
     conn.commit()
     conn.close()
 
@@ -60,7 +60,6 @@ def format_id(entry, prefix, suffix='', id_length=0, pad_char='0'):
     if id_length > 0:
         entry = entry.zfill(id_length) if pad_char == '0' else entry.rjust(id_length, pad_char)
     return f"{prefix}{entry}{suffix}"
-
 
 def build_grid(sample_ids, replicate_count, layout_mode,
                pos_label='PosCtrl', neg_label='NegCtrl', ctrl3_label='Ctrl3',
@@ -200,6 +199,9 @@ def api_save_preset():
 
 @app.route('/api/presets/<name>', methods=['DELETE'])
 def api_delete_preset_route(name):
+    all_presets = load_presets()
+    if name not in all_presets:
+        return jsonify({"error": "Preset not found"}), 404
     delete_preset(name)
     return jsonify({"message": f'Preset "{name}" deleted.'})
 
