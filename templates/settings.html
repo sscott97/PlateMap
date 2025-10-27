@@ -128,110 +128,112 @@
         }
     </style>
 
+
     <script>
-        function showStatusMessage(msg, duration = 2000) {
-            const status = document.getElementById("statusMsg");
-            status.textContent = msg;
-            clearTimeout(window._statusTimeout);
-            window._statusTimeout = setTimeout(() => {
-                status.textContent = "";
-            }, duration);
-        }
+    async function showStatusMessage(msg, duration = 2000) {
+        const status = document.getElementById("statusMsg");
+        status.textContent = msg;
+        clearTimeout(window._statusTimeout);
+        window._statusTimeout = setTimeout(() => status.textContent = "", duration);
+    }
 
-        function getAllSettings() {
-            return {
-                include_pos: document.getElementsByName("include_pos")[0].checked,
-                include_neg: document.getElementsByName("include_neg")[0].checked,
-                include_ctrl3: document.getElementsByName("include_ctrl3")[0].checked,
-                pos_label: document.getElementsByName("pos_label")[0].value,
-                neg_label: document.getElementsByName("neg_label")[0].value,
-                ctrl3_label: document.getElementsByName("ctrl3_label")[0].value,
-                prefix: document.getElementsByName("prefix")[0].value,
-                suffix: document.getElementsByName("suffix")[0].value,
-                id_length: document.getElementsByName("id_length")[0].value,
-                pad_char: document.getElementsByName("pad_char")[0].value,
-                replicate_count: document.getElementsByName("replicate_count")[0].value,
-                layout_mode: document.getElementsByName("layout_mode")[0].value,
-                plate_count: document.getElementsByName("plate_count")[0].value
-            };
-        }
-
-        function setAllSettings(settings) {
-            document.getElementsByName("include_pos")[0].checked = settings.include_pos || false;
-            document.getElementsByName("include_neg")[0].checked = settings.include_neg || false;
-            document.getElementsByName("include_ctrl3")[0].checked = settings.include_ctrl3 || false;
-            document.getElementsByName("pos_label")[0].value = settings.pos_label || '';
-            document.getElementsByName("neg_label")[0].value = settings.neg_label || '';
-            document.getElementsByName("ctrl3_label")[0].value = settings.ctrl3_label || '';
-            document.getElementsByName("prefix")[0].value = settings.prefix || '';
-            document.getElementsByName("suffix")[0].value = settings.suffix || '';
-            document.getElementsByName("id_length")[0].value = settings.id_length || '';
-            document.getElementsByName("pad_char")[0].value = settings.pad_char || '';
-            document.getElementsByName("replicate_count")[0].value = settings.replicate_count || '';
-            document.getElementsByName("layout_mode")[0].value = settings.layout_mode || 'vertical';
-            document.getElementsByName("plate_count")[0].value = settings.plate_count || '';
-        }
-
-        function loadPresets() {
-            const selector = document.getElementById("presetSelector");
-            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-            selector.innerHTML = '';
-            for (const name in presets) {
-                const option = document.createElement("option");
-                option.value = name;
-                option.textContent = name;
-                selector.appendChild(option);
-            }
-            const selected = localStorage.getItem("selectedPreset");
-            if (selected && presets[selected]) {
-                selector.value = selected;
-                setAllSettings(presets[selected]);
-            }
-        }
-
-        function savePreset() {
-            const name = document.getElementById("newPresetName").value.trim();
-            if (!name) return alert("Enter a name for the preset.");
-
-            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-            presets[name] = getAllSettings();
-            localStorage.setItem("presets", JSON.stringify(presets));
-            localStorage.setItem("selectedPreset", name);
-            loadPresets();
-            showStatusMessage(`Preset "${name}" saved.`);
-        }
-
-        function deletePreset() {
-            const selector = document.getElementById("presetSelector");
-            const name = selector.value;
-            if (!name || !confirm(`Delete preset "${name}"?`)) return;
-
-            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-            delete presets[name];
-            localStorage.setItem("presets", JSON.stringify(presets));
-            localStorage.removeItem("selectedPreset");
-            loadPresets();
-            showStatusMessage(`Preset "${name}" deleted.`);
-
-        }
-
-        function applyPreset() {
-            const selector = document.getElementById("presetSelector");
-            const name = selector.value;
-            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-            if (presets[name]) {
-                setAllSettings(presets[name]);
-                localStorage.setItem("selectedPreset", name);
-            showStatusMessage(`Preset "${name}" applied.`);
-
-            }
-        }
-
-
-        window.onload = function () {
-            loadPresets();          // Load and apply presets
+    function getAllSettings() {
+        return {
+            include_pos: document.getElementsByName("include_pos")[0].checked,
+            include_neg: document.getElementsByName("include_neg")[0].checked,
+            include_ctrl3: document.getElementsByName("include_ctrl3")[0].checked,
+            pos_label: document.getElementsByName("pos_label")[0].value,
+            neg_label: document.getElementsByName("neg_label")[0].value,
+            ctrl3_label: document.getElementsByName("ctrl3_label")[0].value,
+            prefix: document.getElementsByName("prefix")[0].value,
+            suffix: document.getElementsByName("suffix")[0].value,
+            id_length: document.getElementsByName("id_length")[0].value,
+            pad_char: document.getElementsByName("pad_char")[0].value,
+            replicate_count: document.getElementsByName("replicate_count")[0].value,
+            layout_mode: document.getElementsByName("layout_mode")[0].value,
+            plate_count: document.getElementsByName("plate_count")[0].value
         };
+    }
+
+    function setAllSettings(settings) {
+        document.getElementsByName("include_pos")[0].checked = settings.include_pos || false;
+        document.getElementsByName("include_neg")[0].checked = settings.include_neg || false;
+        document.getElementsByName("include_ctrl3")[0].checked = settings.include_ctrl3 || false;
+        document.getElementsByName("pos_label")[0].value = settings.pos_label || '';
+        document.getElementsByName("neg_label")[0].value = settings.neg_label || '';
+        document.getElementsByName("ctrl3_label")[0].value = settings.ctrl3_label || '';
+        document.getElementsByName("prefix")[0].value = settings.prefix || '';
+        document.getElementsByName("suffix")[0].value = settings.suffix || '';
+        document.getElementsByName("id_length")[0].value = settings.id_length || '';
+        document.getElementsByName("pad_char")[0].value = settings.pad_char || '';
+        document.getElementsByName("replicate_count")[0].value = settings.replicate_count || '';
+        document.getElementsByName("layout_mode")[0].value = settings.layout_mode || 'vertical';
+        document.getElementsByName("plate_count")[0].value = settings.plate_count || '';
+    }
+
+    // Load all presets from the server
+    async function loadPresets() {
+        const selector = document.getElementById("presetSelector");
+        selector.innerHTML = '';
+        const res = await fetch("/api/presets");
+        const presets = await res.json();
+        for (const name in presets) {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            selector.appendChild(option);
+        }
+        const selected = localStorage.getItem("selectedPreset");
+        if (selected && presets[selected]) {
+            selector.value = selected;
+            setAllSettings(presets[selected]);
+        }
+    }
+
+    // Save new preset to server
+    async function savePreset() {
+        const name = document.getElementById("newPresetName").value.trim();
+        if (!name) return alert("Enter a name for the preset.");
+        const settings = getAllSettings();
+        await fetch("/api/presets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, settings })
+        });
+        localStorage.setItem("selectedPreset", name);
+        await loadPresets();
+        showStatusMessage(`Preset "${name}" saved.`);
+    }
+
+    // Delete preset on server
+    async function deletePreset() {
+        const selector = document.getElementById("presetSelector");
+        const name = selector.value;
+        if (!name || !confirm(`Delete preset "${name}"?`)) return;
+        await fetch(`/api/presets/${name}`, { method: "DELETE" });
+        localStorage.removeItem("selectedPreset");
+        await loadPresets();
+        showStatusMessage(`Preset "${name}" deleted.`);
+    }
+
+    // Apply preset to form
+    async function applyPreset() {
+        const selector = document.getElementById("presetSelector");
+        const name = selector.value;
+        const res = await fetch("/api/presets");
+        const presets = await res.json();
+        if (presets[name]) {
+            setAllSettings(presets[name]);
+            localStorage.setItem("selectedPreset", name);
+            showStatusMessage(`Preset "${name}" applied.`);
+        }
+    }
+
+    window.onload = loadPresets;
     </script>
+
+
+
 </head>
 
 <body>
