@@ -1,30 +1,55 @@
 from flask import Flask, render_template, request, jsonify
+import sqlite3
 import os
-import json
 
 app = Flask(__name__)
 
-PRESETS_FILE = "presets.json"
+# Use Render Persistent Disk
+DB_FILE = "/mnt/persist/presets.db"
 
 # -----------------------
-# Preset storage helpers
+# Database helpers
 # -----------------------
+def init_db():
+    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS presets (
+            name TEXT PRIMARY KEY,
+            settings TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 def load_presets():
-    if not os.path.exists(PRESETS_FILE):
-        return {}
-    with open(PRESETS_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT name, settings FROM presets")
+    rows = c.fetchall()
+    conn.close()
+    # Convert JSON strings to dict
+    return {name: eval(settings) for name, settings in rows}
 
-def save_presets(data):
-    with open(PRESETS_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+def save_preset(name, settings):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT OR REPLACE INTO presets (name, settings) VALUES (?, ?)", 
+              (name, str(settings)))
+    conn.commit()
+    conn.close()
+
+def delete_preset(name):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("DELETE FROM presets WHERE name = ?", (name,))
+    conn.commit()
+    conn.close()
 
 
 # -----------------------
-# Flask routes
+# Plate building helpers
 # -----------------------
 def format_id(entry, prefix, suffix='', id_length=0, pad_char='0'):
     entry = entry.strip()
@@ -102,6 +127,9 @@ def build_grid(sample_ids, replicate_count, layout_mode,
     return grid
 
 
+# -----------------------
+# Flask routes
+# -----------------------
 @app.route('/', methods=['GET', 'POST'])
 def index():
     default_prefix = ''
@@ -166,22 +194,20 @@ def api_save_preset():
     data = request.json
     if not data or "name" not in data or "settings" not in data:
         return jsonify({"error": "Invalid data"}), 400
-    presets = load_presets()
-    presets[data["name"]] = data["settings"]
-    save_presets(presets)
+    save_preset(data["name"], data["settings"])
     return jsonify({"message": f'Preset "{data["name"]}" saved.'})
 
 
 @app.route('/api/presets/<name>', methods=['DELETE'])
-def api_delete_preset(name):
-    presets = load_presets()
-    if name in presets:
-        del presets[name]
-        save_presets(presets)
-        return jsonify({"message": f'Preset "{name}" deleted.'})
-    return jsonify({"error": "Preset not found"}), 404
+def api_delete_preset_route(name):
+    delete_preset(name)
+    return jsonify({"message": f'Preset "{name}" deleted.'})
 
 
+# -----------------------
+# Main
+# -----------------------
 if __name__ == '__main__':
+    init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

@@ -1,0 +1,17 @@
+{
+    "t": {
+        "include_pos": true,
+        "include_neg": false,
+        "include_ctrl3": false,
+        "pos_label": "",
+        "neg_label": "",
+        "ctrl3_label": "",
+        "prefix": "",
+        "suffix": "",
+        "id_length": "",
+        "pad_char": "",
+        "replicate_count": "",
+        "layout_mode": "vertical",
+        "plate_count": ""
+    }
+}
