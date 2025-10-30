@@ -150,6 +150,8 @@
     </style>
     <script>
         // Apply a settings object to form inputs by name (matching your input names)
+
+        // Apply a settings object to form inputs by name (matching your input names)
         function setAllSettings(settings) {
             if (!settings) return;
             document.getElementsByName("include_pos")[0].checked = !!settings.include_pos;
@@ -167,17 +169,29 @@
             document.getElementsByName("plate_count")[0].value = settings.plate_count || '1';
         }
 
-        // Load the selected preset from localStorage and apply it
-        function loadSelectedPreset() {
+        // Load preset from settings page (prioritized) or from selected preset
+        function loadPresetSettings() {
+            // First check if there's a currentPreset from the settings page
+            const currentPresetStr = localStorage.getItem("currentPreset");
+            if (currentPresetStr) {
+                try {
+                    const currentPreset = JSON.parse(currentPresetStr);
+                    setAllSettings(currentPreset);
+                    // Clear it after loading so it doesn't persist
+                    localStorage.removeItem("currentPreset");
+                    return;
+                } catch (e) {
+                    console.error("Error loading current preset:", e);
+                }
+            }
+            
+            // Otherwise, load from selected preset
             const presets = JSON.parse(localStorage.getItem("presets") || "{}");
             const selectedPresetName = localStorage.getItem("selectedPreset");
             if (selectedPresetName && presets[selectedPresetName]) {
                 setAllSettings(presets[selectedPresetName]);
             }
         }
-
-        // Existing functions: updatePlateInputs, saveFormInputs, loadFormInputs, clearFormInputs
-
 
         function updatePlateInputs() {
             const container = document.getElementById('plate_inputs');
@@ -221,8 +235,6 @@
             }
         }
 
-
-
         function saveFormInputs() {
             const formElements = document.querySelectorAll('form input, form select, form textarea');
             formElements.forEach(el => {
@@ -253,7 +265,7 @@
         }
 
         window.onload = function () {
-            loadSelectedPreset();  // Load and apply selected preset FIRST
+            loadPresetSettings();  // Load preset settings FIRST (from settings page or selected preset)
             loadFormInputs();      // Then load any sessionStorage saved inputs
             updatePlateInputs();   // Then update plate input textareas
             saveFormInputs();      // Add event listeners for sessionStorage saving

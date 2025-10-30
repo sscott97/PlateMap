@@ -15,3 +15,21 @@
         "plate_count": ""
     }
 }
+
+{
+    "GGC 2025 ELISA": {
+        "include_pos": true,
+        "include_neg": true,
+        "include_ctrl3": false,
+        "pos_label": "KIOVIG",
+        "neg_label": "NSC / NEG",
+        "ctrl3_label": "",
+        "prefix": "837S1",
+        "suffix": "",
+        "id_length": "3",
+        "pad_char": "0",
+        "replicate_count": "2",
+        "layout_mode": "vertical",
+        "plate_count": "2"
+    }
+}
