@@ -149,7 +149,6 @@
         }
     </style>
     <script>
-        // Apply a settings object to form inputs by name (matching your input names)
 
         // Apply a settings object to form inputs by name (matching your input names)
         function setAllSettings(settings) {
@@ -202,14 +201,32 @@
                 const group = document.createElement('div');
                 group.className = 'plate-group';
 
-                // Plate Label input
+                // Create a flex container for label, input, and counter
+                const labelRow = document.createElement('div');
+                labelRow.style.display = 'flex';
+                labelRow.style.alignItems = 'center';
+                labelRow.style.gap = '10px';
+                labelRow.style.marginBottom = '5px';
+
+                // Plate Label
                 const labelInputLabel = document.createElement('label');
                 labelInputLabel.textContent = `Plate ${i} Label:`;
+                labelInputLabel.style.margin = '0';
+                
                 const labelInput = document.createElement('input');
                 labelInput.type = 'text';
                 labelInput.name = `plate_label_${i}`;
                 labelInput.placeholder = `Plate ${i}`;
                 labelInput.className = 'plate-label-input';
+                labelInput.style.flex = '1';
+
+                // Counter span
+                const counter = document.createElement('span');
+                counter.id = `counter_${i}`;
+                counter.style.fontWeight = 'bold';
+                counter.style.color = '#0077cc';
+                counter.style.minWidth = '80px';
+                counter.textContent = '0 samples';
 
                 // Restore label if saved
                 const savedLabel = sessionStorage.getItem(`plate_label_${i}`);
@@ -225,10 +242,29 @@
                 const savedText = sessionStorage.getItem(`plate_${i}`);
                 if (savedText !== null) textarea.value = savedText;
 
+                // Function to count samples
+                function updateCounter() {
+                    const text = textarea.value.trim();
+                    if (!text) {
+                        counter.textContent = '0 samples';
+                        return;
+                    }
+                    const samples = text.replace(/;/g, ',').split(',').filter(s => s.trim());
+                    const count = samples.length;
+                    counter.textContent = `${count} sample${count !== 1 ? 's' : ''}`;
+                }
+
+                // Add event listener to update counter
+                textarea.addEventListener('input', updateCounter);
+
+                // Update counter initially
+                updateCounter();
+
                 // Append everything
-                group.appendChild(labelInputLabel);
-                group.appendChild(labelInput);
-                group.appendChild(document.createElement('br'));
+                labelRow.appendChild(labelInputLabel);
+                labelRow.appendChild(labelInput);
+                labelRow.appendChild(counter);
+                group.appendChild(labelRow);
                 group.appendChild(textarea);
                 group.appendChild(document.createElement('br'));
                 container.appendChild(group);
