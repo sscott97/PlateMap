@@ -28,14 +28,21 @@ def save_presets(data):
 # Plate building helpers
 # -----------------------
 def format_id(entry, prefix, suffix='', id_length=0, pad_char='0'):
-    entry = entry.strip()
-    if not entry:
-        return None
+    # Don't strip entry — allow spaces as valid input
+    if not entry or entry.strip() == "":
+        return None  # handle completely empty strings
+    
+    # Remove the '!' marker if used
     if entry.startswith('!'):
-        return entry[1:]
+        entry = entry[1:]
+
+    # Apply zero-padding (or other padding)
     if id_length > 0:
         entry = entry.zfill(id_length) if pad_char == '0' else entry.rjust(id_length, pad_char)
+
+    # Keep spaces in prefix and suffix as typed
     return f"{prefix}{entry}{suffix}"
+
 
 def build_grid(sample_ids, replicate_count, layout_mode,
                pos_label='PosCtrl', neg_label='NegCtrl', ctrl3_label='Ctrl3',
@@ -113,8 +120,8 @@ def index():
     default_neg = ''
     default_ctrl3 = ''
     if request.method == 'POST':
-        prefix = request.form.get('prefix', default_prefix).strip()
-        suffix = request.form.get('suffix', default_suffix).strip()
+        prefix = request.form.get('prefix', default_prefix)
+        suffix = request.form.get('suffix', default_suffix)
         pos_label = request.form.get('pos_label', '').strip() or "Control 1"
         neg_label = request.form.get('neg_label', '').strip() or "Control 2"
         ctrl3_label = request.form.get('ctrl3_label', '').strip() or "Control 3"
