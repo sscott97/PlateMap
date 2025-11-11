@@ -124,7 +124,30 @@
         .button-group {
             display: flex;
             justify-content: space-between;
+            gap: 10px;
             margin-top: 30px;
+        }
+
+        .csv-output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            word-break: break-all;
+            display: none;
+        }
+
+        .csv-output.show {
+            display: block;
+        }
+
+        .csv-output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
         }
 
         #plate_inputs label {
@@ -145,7 +168,6 @@
             border: 1px solid #ccc;
             border-radius: 6px;
             min-height: 40px;
-            font-family: 'Courier New', monospace;
             word-break: break-all;
         }
 
@@ -360,6 +382,77 @@
             alert('Range copied to clipboard!');
         }
 
+        function generateCSVList() {
+            const prefix = document.getElementsByName('prefix')[0].value;
+            const suffix = document.getElementsByName('suffix')[0].value;
+            const idLength = parseInt(document.getElementsByName('id_length')[0].value) || 0;
+            const padChar = document.getElementsByName('pad_char')[0].value || '0';
+            const plateCount = parseInt(document.getElementsByName('plate_count')[0].value) || 1;
+            
+            let allProcessedSamples = [];
+            
+            for (let i = 1; i <= plateCount; i++) {
+                const textarea = document.getElementsByName(`plate_${i}`)[0];
+                if (!textarea) continue;
+                
+                const raw = textarea.value;
+                const nums = raw.replace(/;/g, ',').split(',').filter(s => s.trim());
+                
+                // Process each sample ID
+                nums.forEach(n => {
+                    let entry = n.trim();
+                    if (!entry || entry === '') return;
+                    
+                    // Remove the '!' marker if used
+                    if (entry.startsWith('!')) {
+                        entry = entry.substring(1);
+                    }
+                    
+                    // Apply zero-padding (or other padding)
+                    if (idLength > 0) {
+                        if (padChar === '0') {
+                            entry = entry.padStart(idLength, '0');
+                        } else {
+                            entry = entry.padStart(idLength, padChar);
+                        }
+                    }
+                    
+                    // Add prefix and suffix
+                    const formatted = `${prefix}${entry}${suffix}`;
+                    allProcessedSamples.push(formatted);
+                });
+            }
+            
+            const outputDiv = document.getElementById('csv_output');
+            const outputText = document.getElementById('csv_output_text');
+            
+            if (allProcessedSamples.length === 0) {
+                outputText.textContent = 'No samples to process. Please enter sample IDs in the plate layouts.';
+            } else {
+                outputText.textContent = allProcessedSamples.join(',');
+            }
+            
+            outputDiv.classList.add('show');
+        }
+
+        function copyCSVList() {
+            const outputText = document.getElementById('csv_output_text').textContent;
+            
+            if (!outputText || outputText.includes('No samples')) {
+                alert('Please generate a list first');
+                return;
+            }
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = outputText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            alert('Comma-separated list copied to clipboard!');
+        }
+
         window.onload = function () {
             loadPresetSettings();  // Load preset settings FIRST (from settings page or selected preset)
             loadFormInputs();      // Then load any sessionStorage saved inputs
@@ -439,16 +532,26 @@
 
             <div class="button-group">
                 <button type="submit">Generate Plate Maps</button>
+                <button type="button" onclick="generateCSVList()">Generate Comma-Separated List</button>
                 <button type="button" onclick="clearFormInputs()">Clear Inputs</button>
             </div>
         </form>
+
+        <!-- CSV Output Section -->
+        <div class="csv-output" id="csv_output">
+            <div class="csv-output-header">
+                <span>Processed Sample IDs:</span>
+                <button type="button" onclick="copyCSVList()">Copy to Clipboard</button>
+            </div>
+            <div id="csv_output_text"></div>
+        </div>
 
         <!-- Number Range Generator Section -->
         <div class="section-title">Number Range Generator</div>
         <div class="range-generator">
             <div class="input-group">
                 <label for="range_start">Start Number:</label>
-                <input type="number" id="range_start" placeholder="e.g. 4" style="width: 100px;">
+                <input type="number" id="range_start" placeholder="e.g. 1" style="width: 100px;">
                 
                 <label for="range_end">End Number:</label>
                 <input type="number" id="range_end" placeholder="e.g. 10" style="width: 100px;">
