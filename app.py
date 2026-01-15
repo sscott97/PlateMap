@@ -32,10 +32,10 @@ def format_id(entry, prefix, suffix='', id_length=0, pad_char='0'):
     if not entry or entry.strip() == "":
         return None  # handle completely empty strings
     
-    # Remove the '!' marker if used
+    # Check if entry starts with '!' - if so, bypass all formatting
     if entry.startswith('!'):
-        entry = entry[1:]
-
+        return entry[1:]  # Return the entry without the '!' and without any formatting
+    
     # Apply zero-padding (or other padding)
     if id_length > 0:
         entry = entry.zfill(id_length) if pad_char == '0' else entry.rjust(id_length, pad_char)

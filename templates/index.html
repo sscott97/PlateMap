@@ -403,9 +403,10 @@
                     let entry = n.trim();
                     if (!entry || entry === '') return;
                     
-                    // Remove the '!' marker if used
+                    // Check if entry starts with '!' - if so, bypass all formatting
                     if (entry.startsWith('!')) {
-                        entry = entry.substring(1);
+                        allProcessedSamples.push(entry.substring(1));
+                        return;
                     }
                     
                     // Apply zero-padding (or other padding)
