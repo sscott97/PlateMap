@@ -209,7 +209,7 @@
         }
 
         // Load preset from settings page (prioritized) or from selected preset
-        function loadPresetSettings() {
+        async function loadPresetSettings() {
             // First check if there's a currentPreset from the settings page
             const currentPresetStr = localStorage.getItem("currentPreset");
             if (currentPresetStr) {
@@ -224,11 +224,19 @@
                 }
             }
             
-            // Otherwise, load from selected preset
-            const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-            const selectedPresetName = localStorage.getItem("selectedPreset");
-            if (selectedPresetName && presets[selectedPresetName]) {
-                setAllSettings(presets[selectedPresetName]);
+            // Otherwise, load from server-side selected preset
+            try {
+                const selectedPresetName = localStorage.getItem("selectedPreset");
+                if (selectedPresetName) {
+                    const response = await fetch('/api/presets');
+                    const presets = await response.json();
+                    
+                    if (presets[selectedPresetName]) {
+                        setAllSettings(presets[selectedPresetName]);
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading preset from server:", error);
             }
         }
 
@@ -454,8 +462,8 @@
             alert('Comma-separated list copied to clipboard!');
         }
 
-        window.onload = function () {
-            loadPresetSettings();  // Load preset settings FIRST (from settings page or selected preset)
+        window.onload = async function () {
+            await loadPresetSettings();  // Load preset settings FIRST (from settings page or selected preset)
             loadFormInputs();      // Then load any sessionStorage saved inputs
             updatePlateInputs();   // Then update plate input textareas
             saveFormInputs();      // Add event listeners for sessionStorage saving

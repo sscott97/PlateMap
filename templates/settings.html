@@ -57,7 +57,7 @@
 
     <script>
     // -------------------------------
-    // Preset helpers
+    // Preset helpers - SERVER-SIDE STORAGE
     // -------------------------------
     function showStatusMessage(msg, duration = 2000) {
         const status = document.getElementById("statusMsg");
@@ -100,55 +100,115 @@
         document.getElementsByName("plate_count")[0].value = settings.plate_count || '';
     }
 
-    function loadPresets() {
+    async function loadPresets() {
         const selector = document.getElementById("presetSelector");
         selector.innerHTML = '';
-        const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-        for (const name in presets) {
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            selector.appendChild(option);
-        }
-        const selected = localStorage.getItem("selectedPreset");
-        if (selected && presets[selected]) {
-            selector.value = selected;
-            setAllSettings(presets[selected]);
+        
+        try {
+            // Fetch presets from server
+            const response = await fetch('/api/presets');
+            const presets = await response.json();
+            
+            for (const name in presets) {
+                const option = document.createElement("option");
+                option.value = name;
+                option.textContent = name;
+                selector.appendChild(option);
+            }
+            
+            // Check if there's a selected preset in localStorage (for UI state only)
+            const selected = localStorage.getItem("selectedPreset");
+            if (selected && presets[selected]) {
+                selector.value = selected;
+                setAllSettings(presets[selected]);
+            }
+        } catch (error) {
+            console.error("Error loading presets:", error);
+            showStatusMessage("Error loading presets from server");
         }
     }
 
-    function savePreset() {
+    async function savePreset() {
         const name = document.getElementById("newPresetName").value.trim();
         if (!name) return alert("Enter a name for the preset.");
+        
         const settings = getAllSettings();
-        const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-        presets[name] = settings;
-        localStorage.setItem("presets", JSON.stringify(presets));
-        localStorage.setItem("selectedPreset", name);
-        loadPresets();
-        showStatusMessage(`Preset "${name}" saved.`);
+        
+        try {
+            const response = await fetch('/api/presets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: name,
+                    settings: settings
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                localStorage.setItem("selectedPreset", name);
+                await loadPresets();
+                showStatusMessage(`Preset "${name}" saved.`);
+                document.getElementById("newPresetName").value = '';
+            } else {
+                showStatusMessage("Error saving preset");
+            }
+        } catch (error) {
+            console.error("Error saving preset:", error);
+            showStatusMessage("Error saving preset to server");
+        }
     }
 
-    function deletePreset() {
+    async function deletePreset() {
         const selector = document.getElementById("presetSelector");
         const name = selector.value;
         if (!name || !confirm(`Delete preset "${name}"?`)) return;
-        const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-        delete presets[name];
-        localStorage.setItem("presets", JSON.stringify(presets));
-        localStorage.removeItem("selectedPreset");
-        loadPresets();
-        showStatusMessage(`Preset "${name}" deleted.`);
+        
+        try {
+            const response = await fetch(`/api/presets/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                localStorage.removeItem("selectedPreset");
+                await loadPresets();
+                showStatusMessage(`Preset "${name}" deleted.`);
+            } else {
+                showStatusMessage("Error deleting preset");
+            }
+        } catch (error) {
+            console.error("Error deleting preset:", error);
+            showStatusMessage("Error deleting preset from server");
+        }
     }
 
-    function applyPreset() {
+    async function applyPreset() {
         const selector = document.getElementById("presetSelector");
         const name = selector.value;
-        const presets = JSON.parse(localStorage.getItem("presets") || "{}");
-        if (presets[name]) {
-            setAllSettings(presets[name]);
-            localStorage.setItem("currentPreset", JSON.stringify(presets[name])); // for index page
-            showStatusMessage(`Preset "${name}" applied.`);
+        
+        if (!name) {
+            alert("Please select a preset first");
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/presets');
+            const presets = await response.json();
+            
+            if (presets[name]) {
+                setAllSettings(presets[name]);
+                localStorage.setItem("selectedPreset", name);
+                localStorage.setItem("currentPreset", JSON.stringify(presets[name])); // for index page
+                showStatusMessage(`Preset "${name}" applied.`);
+            }
+        } catch (error) {
+            console.error("Error applying preset:", error);
+            showStatusMessage("Error loading preset from server");
         }
     }
 
