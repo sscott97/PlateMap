@@ -1,27 +1,104 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# File for storing presets
-PRESETS_FILE = "presets.json"
+# Database connection
+def get_db_connection():
+    """Get database connection using DATABASE_URL from environment"""
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Render provides postgres:// but psycopg2 needs postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return psycopg2.connect(database_url)
+    return None
+
+def init_db():
+    """Initialize database table if it doesn't exist"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute('''
+                CREATE TABLE IF NOT EXISTS presets (
+                    name TEXT PRIMARY KEY,
+                    settings JSONB NOT NULL
+                )
+            ''')
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Error initializing database: {e}")
 
 # -----------------------
 # Preset storage helpers
 # -----------------------
 def load_presets():
-    if not os.path.exists(PRESETS_FILE):
+    """Load all presets from database"""
+    conn = get_db_connection()
+    if not conn:
         return {}
-    with open(PRESETS_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+    
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute('SELECT name, settings FROM presets')
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Convert to dict format
+        presets = {}
+        for row in rows:
+            presets[row['name']] = row['settings']
+        return presets
+    except Exception as e:
+        print(f"Error loading presets: {e}")
+        return {}
 
-def save_presets(data):
-    with open(PRESETS_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+def save_preset(name, settings):
+    """Save or update a preset in database"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cur = conn.cursor()
+        cur.execute('''
+            INSERT INTO presets (name, settings)
+            VALUES (%s, %s)
+            ON CONFLICT (name) 
+            DO UPDATE SET settings = EXCLUDED.settings
+        ''', (name, json.dumps(settings)))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error saving preset: {e}")
+        return False
+
+def delete_preset(name):
+    """Delete a preset from database"""
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cur = conn.cursor()
+        cur.execute('DELETE FROM presets WHERE name = %s', (name,))
+        deleted = cur.rowcount > 0
+        conn.commit()
+        cur.close()
+        conn.close()
+        return deleted
+    except Exception as e:
+        print(f"Error deleting preset: {e}")
+        return False
 
 
 # -----------------------
@@ -175,17 +252,15 @@ def api_save_preset():
     data = request.json
     if not data or "name" not in data or "settings" not in data:
         return jsonify({"error": "Invalid data"}), 400
-    presets = load_presets()
-    presets[data["name"]] = data["settings"]
-    save_presets(presets)
-    return jsonify({"message": f'Preset "{data["name"]}" saved.'})
+    
+    if save_preset(data["name"], data["settings"]):
+        return jsonify({"message": f'Preset "{data["name"]}" saved.'})
+    else:
+        return jsonify({"error": "Failed to save preset"}), 500
 
 @app.route('/api/presets/<name>', methods=['DELETE'])
 def api_delete_preset(name):
-    presets = load_presets()
-    if name in presets:
-        del presets[name]
-        save_presets(presets)
+    if delete_preset(name):
         return jsonify({"message": f'Preset "{name}" deleted.'})
     return jsonify({"error": "Preset not found"}), 404
 
@@ -194,5 +269,6 @@ def api_delete_preset(name):
 # Main
 # -----------------------
 if __name__ == '__main__':
+    init_db()  # Initialize database on startup
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
