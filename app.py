@@ -32,8 +32,14 @@ def init_db():
             conn.commit()
             cur.close()
             conn.close()
+            print("Database initialized successfully")
         except Exception as e:
             print(f"Error initializing database: {e}")
+            if conn:
+                conn.close()
+
+# Initialize database when module loads
+init_db()
 
 # -----------------------
 # Preset storage helpers
@@ -42,9 +48,22 @@ def load_presets():
     """Load all presets from database"""
     conn = get_db_connection()
     if not conn:
+        print("No database connection available")
         return {}
     
     try:
+        # Try to initialize the table first if it doesn't exist
+        cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS presets (
+                name TEXT PRIMARY KEY,
+                settings JSONB NOT NULL
+            )
+        ''')
+        conn.commit()
+        cur.close()
+        
+        # Now load the presets
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute('SELECT name, settings FROM presets')
         rows = cur.fetchall()
@@ -58,16 +77,29 @@ def load_presets():
         return presets
     except Exception as e:
         print(f"Error loading presets: {e}")
+        if conn:
+            conn.close()
         return {}
 
 def save_preset(name, settings):
     """Save or update a preset in database"""
     conn = get_db_connection()
     if not conn:
+        print("No database connection available")
         return False
     
     try:
         cur = conn.cursor()
+        # Ensure table exists
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS presets (
+                name TEXT PRIMARY KEY,
+                settings JSONB NOT NULL
+            )
+        ''')
+        conn.commit()
+        
+        # Insert or update preset
         cur.execute('''
             INSERT INTO presets (name, settings)
             VALUES (%s, %s)
@@ -77,15 +109,19 @@ def save_preset(name, settings):
         conn.commit()
         cur.close()
         conn.close()
+        print(f"Preset '{name}' saved successfully")
         return True
     except Exception as e:
         print(f"Error saving preset: {e}")
+        if conn:
+            conn.close()
         return False
 
 def delete_preset(name):
     """Delete a preset from database"""
     conn = get_db_connection()
     if not conn:
+        print("No database connection available")
         return False
     
     try:
@@ -95,9 +131,12 @@ def delete_preset(name):
         conn.commit()
         cur.close()
         conn.close()
+        print(f"Preset '{name}' deleted: {deleted}")
         return deleted
     except Exception as e:
         print(f"Error deleting preset: {e}")
+        if conn:
+            conn.close()
         return False
 
 
@@ -269,6 +308,5 @@ def api_delete_preset(name):
 # Main
 # -----------------------
 if __name__ == '__main__':
-    init_db()  # Initialize database on startup
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
