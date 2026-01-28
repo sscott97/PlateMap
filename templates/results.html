@@ -154,25 +154,46 @@
     <script>
     function copyPlateToClipboard(button) {
         const table = button.closest('.plate').querySelector('table');
-        let tsv = '';
+        
+        // Create a temporary container with the table
+        const tempContainer = document.createElement('div');
+        const tempTable = document.createElement('table');
+        tempTable.style.borderCollapse = 'collapse';
+        
+        // Copy table structure (skip header row with column numbers, skip row labels)
         for (let i = 1; i < table.rows.length; i++) {
             const row = table.rows[i];
-            const cells = Array.from(row.cells).slice(1);  // Skip the row label (A-H)
-            const values = cells.map(cell => {
-                let text = cell.innerText.trim();
-                return text.replace(/\n/g, ' ');
-            });
-            tsv += values.join('\t') + '\n';
+            const newRow = tempTable.insertRow();
+            
+            // Copy all cells EXCEPT the first one (row label A-H)
+            for (let j = 1; j < row.cells.length; j++) {
+                const cell = row.cells[j];
+                const newCell = newRow.insertCell();
+                newCell.textContent = cell.innerText.trim().replace(/\n/g, ' ');
+            }
         }
-
-        const textarea = document.createElement('textarea');
-        textarea.value = tsv;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-
-        alert('8x12 layout copied to clipboard!');
+        
+        tempContainer.appendChild(tempTable);
+        document.body.appendChild(tempContainer);
+        
+        // Select the table
+        const range = document.createRange();
+        range.selectNode(tempTable);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Copy to clipboard
+        try {
+            document.execCommand('copy');
+            alert('8x12 plate layout copied to clipboard!');
+        } catch (err) {
+            alert('Failed to copy. Please try again.');
+        }
+        
+        // Clean up
+        selection.removeAllRanges();
+        document.body.removeChild(tempContainer);
     }
 
     function copyPlateCSV(button) {
