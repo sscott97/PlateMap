@@ -13,5 +13,20 @@
         "replicate_count": "",
         "layout_mode": "vertical",
         "plate_count": ""
+    },
+    "test": {
+        "include_pos": true,
+        "include_neg": true,
+        "include_ctrl3": false,
+        "pos_label": "test",
+        "neg_label": "test",
+        "ctrl3_label": "",
+        "prefix": "test",
+        "suffix": "",
+        "id_length": "",
+        "pad_char": "",
+        "replicate_count": "",
+        "layout_mode": "vertical",
+        "plate_count": ""
     }
 }

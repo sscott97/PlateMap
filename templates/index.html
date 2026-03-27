@@ -208,35 +208,16 @@
             document.getElementsByName("plate_count")[0].value = settings.plate_count || '1';
         }
 
-        // Load preset from settings page (prioritized) or from selected preset
+        // Apply preset settings if the user explicitly clicked "Apply" on the settings page
         async function loadPresetSettings() {
-            // First check if there's a currentPreset from the settings page
             const currentPresetStr = localStorage.getItem("currentPreset");
-            if (currentPresetStr) {
-                try {
-                    const currentPreset = JSON.parse(currentPresetStr);
-                    setAllSettings(currentPreset);
-                    // Clear it after loading so it doesn't persist
-                    localStorage.removeItem("currentPreset");
-                    return;
-                } catch (e) {
-                    console.error("Error loading current preset:", e);
-                }
-            }
-            
-            // Otherwise, load from server-side selected preset
+            if (!currentPresetStr) return;
             try {
-                const selectedPresetName = localStorage.getItem("selectedPreset");
-                if (selectedPresetName) {
-                    const response = await fetch('/api/presets');
-                    const presets = await response.json();
-                    
-                    if (presets[selectedPresetName]) {
-                        setAllSettings(presets[selectedPresetName]);
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading preset from server:", error);
+                const currentPreset = JSON.parse(currentPresetStr);
+                setAllSettings(currentPreset);
+                localStorage.removeItem("currentPreset");
+            } catch (e) {
+                console.error("Error loading current preset:", e);
             }
         }
 
@@ -371,11 +352,32 @@
             output.textContent = range.join(',');
         }
 
+        function generateRangeByCount() {
+            const start = parseInt(document.getElementById('range_count_start').value);
+            const count = parseInt(document.getElementById('range_count').value);
+            const output = document.getElementById('range_output');
+
+            if (isNaN(start) || isNaN(count)) {
+                output.textContent = 'Please enter a start number and a count';
+                return;
+            }
+            if (count < 1) {
+                output.textContent = 'Count must be at least 1';
+                return;
+            }
+
+            const range = [];
+            for (let i = start; i < start + count; i++) {
+                range.push(i);
+            }
+            output.textContent = range.join(',');
+        }
+
         function copyRangeToClipboard() {
             const output = document.getElementById('range_output');
             const text = output.textContent;
             
-            if (!text || text.includes('Please enter') || text.includes('Start number')) {
+            if (!text || text.includes('Please enter') || text.includes('Start number') || text.includes('Count must') || text === 'Generated range will appear here...') {
                 alert('Please generate a range first');
                 return;
             }
@@ -463,10 +465,10 @@
         }
 
         window.onload = async function () {
-            await loadPresetSettings();  // Load preset settings FIRST (from settings page or selected preset)
-            loadFormInputs();      // Then load any sessionStorage saved inputs
-            updatePlateInputs();   // Then update plate input textareas
-            saveFormInputs();      // Add event listeners for sessionStorage saving
+            loadFormInputs();             // 1. Restore sessionStorage (baseline)
+            await loadPresetSettings();   // 2. Override with applied preset (wins over sessionStorage)
+            updatePlateInputs();          // 3. Build plate inputs using final plate_count
+            saveFormInputs();             // 4. Start tracking input changes
         };
     </script>
 </head>
@@ -559,18 +561,32 @@
         <div class="section-title">Number Range Generator</div>
         <div class="range-generator">
             <div class="input-group">
-                <label for="range_start">Start Number:</label>
+                <label for="range_start">Start:</label>
                 <input type="number" id="range_start" placeholder="e.g. 1" style="width: 100px;">
-                
-                <label for="range_end">End Number:</label>
+
+                <label for="range_end">End:</label>
                 <input type="number" id="range_end" placeholder="e.g. 10" style="width: 100px;">
-                
+
                 <button type="button" onclick="generateRange()">Generate Range</button>
-                <button type="button" onclick="copyRangeToClipboard()">Copy to Clipboard</button>
             </div>
-            
+
+            <div class="input-group" style="margin-top: 10px;">
+                <label for="range_count_start">Start:</label>
+                <input type="number" id="range_count_start" placeholder="e.g. 10" style="width: 100px;">
+
+                <span style="font-size: 20px; font-weight: bold; line-height: 1;">+</span>
+
+                <input type="number" id="range_count" placeholder="how many" style="width: 100px;">
+
+                <button type="button" onclick="generateRangeByCount()">Generate Next N</button>
+            </div>
+
             <div class="range-output" id="range_output">
                 Generated range will appear here...
+            </div>
+
+            <div style="margin-top: 10px;">
+                <button type="button" onclick="copyRangeToClipboard()">Copy to Clipboard</button>
             </div>
         </div>
     </div>

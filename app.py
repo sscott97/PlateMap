@@ -1,143 +1,37 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-# Database connection
-def get_db_connection():
-    """Get database connection using DATABASE_URL from environment"""
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url:
-        # Render provides postgres:// but psycopg2 needs postgresql://
-        if database_url.startswith('postgres://'):
-            database_url = database_url.replace('postgres://', 'postgresql://', 1)
-        return psycopg2.connect(database_url)
-    return None
-
-def init_db():
-    """Initialize database table if it doesn't exist"""
-    conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS presets (
-                    name TEXT PRIMARY KEY,
-                    settings JSONB NOT NULL
-                )
-            ''')
-            conn.commit()
-            cur.close()
-            conn.close()
-            print("Database initialized successfully")
-        except Exception as e:
-            print(f"Error initializing database: {e}")
-            if conn:
-                conn.close()
-
-# Initialize database when module loads
-init_db()
+PRESETS_FILE = os.path.join(os.path.dirname(__file__), 'presets.json')
 
 # -----------------------
-# Preset storage helpers
+# Preset storage helpers (JSON file-backed)
 # -----------------------
 def load_presets():
-    """Load all presets from database"""
-    conn = get_db_connection()
-    if not conn:
-        print("No database connection available")
-        return {}
-    
-    try:
-        # Try to initialize the table first if it doesn't exist
-        cur = conn.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS presets (
-                name TEXT PRIMARY KEY,
-                settings JSONB NOT NULL
-            )
-        ''')
-        conn.commit()
-        cur.close()
-        
-        # Now load the presets
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute('SELECT name, settings FROM presets')
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        # Convert to dict format
-        presets = {}
-        for row in rows:
-            presets[row['name']] = row['settings']
-        return presets
-    except Exception as e:
-        print(f"Error loading presets: {e}")
-        if conn:
-            conn.close()
-        return {}
+    if os.path.exists(PRESETS_FILE):
+        with open(PRESETS_FILE, 'r') as f:
+            return json.load(f)
+    return {}
+
+def _write_presets(presets):
+    with open(PRESETS_FILE, 'w') as f:
+        json.dump(presets, f, indent=4)
 
 def save_preset(name, settings):
-    """Save or update a preset in database"""
-    conn = get_db_connection()
-    if not conn:
-        print("No database connection available")
-        return False
-    
-    try:
-        cur = conn.cursor()
-        # Ensure table exists
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS presets (
-                name TEXT PRIMARY KEY,
-                settings JSONB NOT NULL
-            )
-        ''')
-        conn.commit()
-        
-        # Insert or update preset
-        cur.execute('''
-            INSERT INTO presets (name, settings)
-            VALUES (%s, %s)
-            ON CONFLICT (name) 
-            DO UPDATE SET settings = EXCLUDED.settings
-        ''', (name, json.dumps(settings)))
-        conn.commit()
-        cur.close()
-        conn.close()
-        print(f"Preset '{name}' saved successfully")
-        return True
-    except Exception as e:
-        print(f"Error saving preset: {e}")
-        if conn:
-            conn.close()
-        return False
+    presets = load_presets()
+    presets[name] = settings
+    _write_presets(presets)
+    return True
 
 def delete_preset(name):
-    """Delete a preset from database"""
-    conn = get_db_connection()
-    if not conn:
-        print("No database connection available")
-        return False
-    
-    try:
-        cur = conn.cursor()
-        cur.execute('DELETE FROM presets WHERE name = %s', (name,))
-        deleted = cur.rowcount > 0
-        conn.commit()
-        cur.close()
-        conn.close()
-        print(f"Preset '{name}' deleted: {deleted}")
-        return deleted
-    except Exception as e:
-        print(f"Error deleting preset: {e}")
-        if conn:
-            conn.close()
-        return False
+    presets = load_presets()
+    if name in presets:
+        del presets[name]
+        _write_presets(presets)
+        return True
+    return False
 
 
 # -----------------------

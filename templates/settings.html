@@ -280,17 +280,10 @@
             </div>
 
             <div class="back-link">
-                <p><a href="/" onclick="saveCurrentPreset()">← Back to Form</a></p>
+                <p><a href="/">← Back to Form</a></p>
             </div>
         </form>
     </div>
 
-    <script>
-    // Save the current applied preset to index page when going back
-    function saveCurrentPreset() {
-        const preset = getAllSettings();
-        localStorage.setItem("currentPreset", JSON.stringify(preset));
-    }
-    </script>
 </body>
 </html>
